@@ -1,16 +1,18 @@
-From 58f2acdc63d85eb9818d783a9a858b1ecc267fa7 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Jernej Skrabec <jernej.skrabec@siol.net>
 Date: Thu, 26 Dec 2019 11:01:51 +0100
-Subject: [PATCH 2/2] WIP: DRMPRIME deinterlace filter
+Subject: [PATCH] WIP: DRMPRIME deinterlace filter
 
 ---
  .../DVDCodecs/Video/DVDVideoCodecDRMPRIME.cpp | 368 +++++++++++++++---
  .../DVDCodecs/Video/DVDVideoCodecDRMPRIME.h   |   9 +-
  2 files changed, 322 insertions(+), 55 deletions(-)
 
+diff --git a/xbmc/cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodecDRMPRIME.cpp b/xbmc/cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodecDRMPRIME.cpp
+index 7507c12e9a..4759dde3f9 100644
 --- a/xbmc/cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodecDRMPRIME.cpp
 +++ b/xbmc/cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodecDRMPRIME.cpp
-@@ -79,12 +79,15 @@ CDVDVideoCodecDRMPRIME::CDVDVideoCodecDR
+@@ -79,12 +79,15 @@ CDVDVideoCodecDRMPRIME::CDVDVideoCodecDRMPRIME(CProcessInfo& processInfo)
    : CDVDVideoCodec(processInfo)
  {
    m_pFrame = av_frame_alloc();
@@ -26,7 +28,7 @@ Subject: [PATCH 2/2] WIP: DRMPRIME deinterlace filter
    avcodec_free_context(&m_pCodecContext);
  }
  
-@@ -341,8 +344,19 @@ bool CDVDVideoCodecDRMPRIME::Open(CDVDSt
+@@ -341,8 +344,19 @@ bool CDVDVideoCodecDRMPRIME::Open(CDVDStreamInfo& hints, CDVDCodecOptions& optio
    }
  
    UpdateProcessInfo(m_pCodecContext, m_pCodecContext->pix_fmt);
@@ -47,7 +49,7 @@ Subject: [PATCH 2/2] WIP: DRMPRIME deinterlace filter
  
    return true;
  }
-@@ -418,6 +432,8 @@ void CDVDVideoCodecDRMPRIME::Reset()
+@@ -405,6 +419,8 @@ void CDVDVideoCodecDRMPRIME::Reset()
      return;
  
    Drain();
@@ -56,8 +58,8 @@ Subject: [PATCH 2/2] WIP: DRMPRIME deinterlace filter
  
    do
    {
-@@ -465,7 +481,7 @@ void CDVDVideoCodecDRMPRIME::Drain()
-   av_packet_free(&avpkt);
+@@ -443,7 +459,7 @@ void CDVDVideoCodecDRMPRIME::Drain()
+   }
  }
  
 -void CDVDVideoCodecDRMPRIME::SetPictureParams(VideoPicture* pVideoPicture)
@@ -65,7 +67,7 @@ Subject: [PATCH 2/2] WIP: DRMPRIME deinterlace filter
  {
    pVideoPicture->iWidth = m_pFrame->width;
    pVideoPicture->iHeight = m_pFrame->height;
-@@ -559,13 +575,232 @@ void CDVDVideoCodecDRMPRIME::SetPictureP
+@@ -525,13 +541,232 @@ void CDVDVideoCodecDRMPRIME::SetPictureParams(VideoPicture* pVideoPicture)
                             ? DVD_NOPTS_VALUE
                             : static_cast<double>(pts) * DVD_TIME_BASE / AV_TIME_BASE;
    pVideoPicture->dts = DVD_NOPTS_VALUE;
@@ -132,9 +134,7 @@ Subject: [PATCH 2/2] WIP: DRMPRIME deinterlace filter
 +}
 +
 +bool CDVDVideoCodecDRMPRIME::FilterOpen(const std::string& filters, bool test)
- {
--  if (!m_pFilterIn)
--    return VC_PICTURE;
++{
 +  int result;
 +
 +  if (m_pFilterGraph)
@@ -148,13 +148,13 @@ Subject: [PATCH 2/2] WIP: DRMPRIME deinterlace filter
 +    CLog::Log(LOGERROR, "CDVDVideoCodecDRMPRIME::FilterOpen - unable to alloc filter graph");
 +    return false;
 +  }
- 
++
 +  const AVFilter* srcFilter = avfilter_get_by_name("buffer");
 +  const AVFilter* outFilter = avfilter_get_by_name("buffersink");
 +  enum AVPixelFormat pix_fmts[] = { AV_PIX_FMT_DRM_PRIME, AV_PIX_FMT_NONE };
 +
-+  std::string args = StringUtils::Format("video_size={}x{}:pix_fmt={}:time_base={}/{}:"
-+                                         "pixel_aspect={}/{}",
++  std::string args = StringUtils::Format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:"
++                                         "pixel_aspect=%d/%d:sws_param=flags=2",
 +                                         m_pCodecContext->width,
 +                                         m_pCodecContext->height,
 +                                         m_pCodecContext->pix_fmt,
@@ -249,7 +249,7 @@ Subject: [PATCH 2/2] WIP: DRMPRIME deinterlace filter
 +  {
 +    char err[AV_ERROR_MAX_STRING_SIZE] = {};
 +    av_strerror(result, err, AV_ERROR_MAX_STRING_SIZE);
-+    CLog::Log(LOGERROR, "CDVDVideoCodecDRMPRIME::FilterOpen - avfilter_graph_config:  {} ({})",
++    CLog::Log(LOGDEBUG, "CDVDVideoCodecDRMPRIME::FilterOpen - avfilter_graph_config:  {} ({})",
 +              err, result);
 +    return false;
 +  }
@@ -274,7 +274,7 @@ Subject: [PATCH 2/2] WIP: DRMPRIME deinterlace filter
 +    char* graphDump = avfilter_graph_dump(m_pFilterGraph, nullptr);
 +    if (graphDump)
 +    {
-+      CLog::Log(LOGDEBUG, "CDVDVideoCodecDRMPRIME::FilterOpen - Final filter graph:\n{}",
++      CLog::Log(LOGDEBUG, "CDVDVideoCodecDRMPRIME::FilterOpen - Final filter graph:\n%s",
 +                graphDump);
 +      av_freep(&graphDump);
 +    }
@@ -284,7 +284,9 @@ Subject: [PATCH 2/2] WIP: DRMPRIME deinterlace filter
 +}
 +
 +void CDVDVideoCodecDRMPRIME::FilterClose()
-+{
+ {
+-  if (!m_pFilterIn)
+-    return VC_PICTURE;
 +  if (m_pFilterGraph)
 +  {
 +    CLog::Log(LOGDEBUG, LOGVIDEO, "CDVDVideoCodecDRMPRIME::FilterClose - Freeing filter graph");
@@ -295,13 +297,13 @@ Subject: [PATCH 2/2] WIP: DRMPRIME deinterlace filter
 +    m_pFilterOut = nullptr;
 +  }
 +}
-+
+ 
 +CDVDVideoCodec::VCReturn CDVDVideoCodecDRMPRIME::ProcessFilterIn()
 +{
    int ret = av_buffersrc_add_frame(m_pFilterIn, m_pFrame);
    if (ret < 0)
    {
-@@ -581,21 +816,14 @@ CDVDVideoCodec::VCReturn CDVDVideoCodecD
+@@ -547,21 +782,14 @@ CDVDVideoCodec::VCReturn CDVDVideoCodecDRMPRIME::ProcessFilterIn()
  
  CDVDVideoCodec::VCReturn CDVDVideoCodecDRMPRIME::ProcessFilterOut()
  {
@@ -327,7 +329,7 @@ Subject: [PATCH 2/2] WIP: DRMPRIME deinterlace filter
    }
    else if (ret)
    {
-@@ -606,9 +834,27 @@ CDVDVideoCodec::VCReturn CDVDVideoCodecD
+@@ -572,9 +800,27 @@ CDVDVideoCodec::VCReturn CDVDVideoCodecDRMPRIME::ProcessFilterOut()
      return VC_ERROR;
    }
  
@@ -355,7 +357,7 @@ Subject: [PATCH 2/2] WIP: DRMPRIME deinterlace filter
  CDVDVideoCodec::VCReturn CDVDVideoCodecDRMPRIME::GetPicture(VideoPicture* pVideoPicture)
  {
    if (m_codecControlFlags & DVD_CODEC_CTRL_DRAIN)
-@@ -620,57 +866,71 @@ CDVDVideoCodec::VCReturn CDVDVideoCodecD
+@@ -586,57 +832,71 @@ CDVDVideoCodec::VCReturn CDVDVideoCodecDRMPRIME::GetPicture(VideoPicture* pVideo
      pVideoPicture->videoBuffer = nullptr;
    }
  
@@ -465,9 +467,11 @@ Subject: [PATCH 2/2] WIP: DRMPRIME deinterlace filter
  
    return VC_PICTURE;
  }
+diff --git a/xbmc/cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodecDRMPRIME.h b/xbmc/cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodecDRMPRIME.h
+index 7112d1b48a..13bec95135 100644
 --- a/xbmc/cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodecDRMPRIME.h
 +++ b/xbmc/cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodecDRMPRIME.h
-@@ -38,19 +38,26 @@ public:
+@@ -38,18 +38,25 @@ public:
  
  protected:
    void Drain();
@@ -488,7 +492,6 @@ Subject: [PATCH 2/2] WIP: DRMPRIME deinterlace filter
 +  std::string m_filters;
    int m_codecControlFlags = 0;
    CDVDStreamInfo m_hints;
-   double m_DAR = 1.0;
    AVCodecContext* m_pCodecContext = nullptr;
    AVFrame* m_pFrame = nullptr;
 +  AVFrame* m_pFilterFrame = nullptr;
