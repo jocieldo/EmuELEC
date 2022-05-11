@@ -42,7 +42,7 @@ fi
 
 fi
 
-if [ "$DEVICE" == "RK356x" ] || [ "$DEVICE" == "OdroidM1" ]; then
+if [ "$DEVICE" == "RK3399" ] || [ "$DEVICE" == "OdroidM1" ]; then
 	AMIBERRY_PLATFORM="a64"
 fi
 
