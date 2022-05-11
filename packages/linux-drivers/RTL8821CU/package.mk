@@ -2,13 +2,13 @@
 # Copyright (C) 2009-2016 Stephan Raue (stephan@openelec.tv)
 # Copyright (C) 2018-present Team LibreELEC (https://libreelec.tv)
 
-PKG_NAME="RTL8821CU"
-PKG_VERSION="37e27f9165300c89607144b646545fac576ec510"
-PKG_SHA256="749ba2e77d0364381445e40f7f0b7041d861cf9a356dbe53085e3abaef888c1d"
+PKG_NAME="RTL8192EU"
+PKG_VERSION="744bbe52976e51895fce2c1d4075f97a98dca2b2"
+PKG_SHA256="2197871514bd246f934bb36beb398b26af122e797b322f8f59f52ce085fec136"
 PKG_LICENSE="GPL"
-PKG_SITE="https://github.com/brektrou/rtl8821CU"
-PKG_URL="https://codeload.github.com/brektrou/rtl8821CU/zip/refs/heads/master"
-PKG_LONGDESC="Realtek RTL8821CU Linux driver"
+PKG_SITE="https://github.com/Mange/rtl8192eu-linux-driver"
+PKG_URL="https://github.com/Mange/rtl8192eu-linux-driver/archive/${PKG_VERSION}.tar.gz"
+PKG_LONGDESC="Realtek RTL8192EU Linux 3.x driver"
 PKG_IS_KERNEL_PKG="yes"
 
 pre_make_target() {
@@ -20,7 +20,8 @@ make_target() {
        ARCH=${TARGET_KERNEL_ARCH} \
        KSRC=$(kernel_path) \
        CROSS_COMPILE=${TARGET_KERNEL_PREFIX} \
-       CONFIG_POWER_SAVING=n
+       CONFIG_POWER_SAVING=n \
+       USER_EXTRA_CFLAGS="-Wno-error=date-time"
 }
 
 makeinstall_target() {
