@@ -5,7 +5,6 @@ Based on  [CoreELEC](https://github.com/CoreELEC/CoreELEC) and [Lakka](https://g
 ---
 [![GitHub Release](https://img.shields.io/github/release/EmuELEC/EmuELEC.svg)](https://github.com/EmuELEC/EmuELEC/releases/latest)
 [![GPL-2.0 Licensed](https://shields.io/badge/license-GPL2-blue)](https://github.com/EmuELEC/EmuELEC/blob/master/licenses/GPL2.txt)
-[![Discord](https://img.shields.io/badge/chat-on%20discord-7289da.svg?logo=discord)](https://discord.gg/cbgtJTu)
 
 ### ⚠️**IMPORTANT**⚠️
 #### EmuELEC is now aarch64 ONLY, compiling and using the ARM version after version 3.9 is no longer supported. Please have a look at the master_32bit branch if you want to build the 32-bit version.
@@ -18,22 +17,17 @@ Based on  [CoreELEC](https://github.com/CoreELEC/CoreELEC) and [Lakka](https://g
 These instructions are only for Debian/Ubuntu based systems.
 
 ```
-$ apt install gcc make git unzip wget xz-utils libsdl2-dev libsdl2-mixer-dev libfreeimage-dev libfreetype6-dev libcurl4-openssl-dev rapidjson-dev libasound2-dev libgl1-mesa-dev build-essential libboost-all-dev cmake fonts-droid-fallback libvlc-dev libvlccore-dev vlc-bin texinfo premake4 golang libssl-dev curl patchelf xmlstarlet default-jre xsltproc
+$ apt install gcc make git unzip wget xz-utils libsdl2-dev libsdl2-mixer-dev libfreeimage-dev libfreetype6-dev libcurl4-openssl-dev rapidjson-dev libasound2-dev libgl1-mesa-dev build-essential libboost-all-dev cmake fonts-droid-fallback libvlc-dev libvlccore-dev vlc-bin texinfo premake4 golang libssl-dev curl patchelf xmlstarlet default-jre xsltproc golang-go
 ```
 
 ### Building EmuELEC
-To build EmuELEC locally do the following:
+To build EmuELEC locally for Rockchip RK3399 do the following:
 
 ```
 $ git clone https://github.com/EmuELEC/EmuELEC.git
 $ cd EmuELEC
 $ git checkout dev
-$ PROJECT=Amlogic-ce DEVICE=Amlogic-ng ARCH=aarch64 DISTRO=EmuELEC make image
-```
-
-For the Odroid GO Advance/Super:
-```
-$ PROJECT=Rockchip DEVICE=OdroidGoAdvance ARCH=aarch64 DISTRO=EmuELEC make image
+$ PROJECT=Rockchip DEVICE=RK3399 ARCH=aarch64 DISTRO=EmuELEC make image
 ```
 
 Note: In some cases you may also need to install the tzdata, xfonts-utils and/or lzop packages.
